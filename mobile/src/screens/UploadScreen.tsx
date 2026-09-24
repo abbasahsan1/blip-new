@@ -11,8 +11,10 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import { PrimaryButton } from '../components/PrimaryButton';
+import { BottomNav } from '../components/BottomNav';
 import { uploadBlippApi, ApiRequestError } from '../services/api';
 import { Colors, Radius, Spacing, Typography } from '../theme/tokens';
 
@@ -150,7 +152,11 @@ export const UploadScreen = ({ navigation }: any) => {
               {selectedFile ? (
                 <View style={styles.selectedFileBox}>
                   <View style={styles.fileIconBox}>
-                    <Text style={styles.fileIcon}>🎵</Text>
+                    <MaterialCommunityIcons
+                      name="music-box-outline"
+                      size={24}
+                      color={Colors.primaryContainer}
+                    />
                   </View>
                   <View style={styles.fileInfo}>
                     <Text style={styles.fileName} numberOfLines={1}>
@@ -216,6 +222,14 @@ export const UploadScreen = ({ navigation }: any) => {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+      <BottomNav
+        currentRoute="Upload"
+        onNavigate={(route) => {
+          if (route === 'Feed') {
+            navigation.navigate('Feed');
+          }
+        }}
+      />
     </SafeAreaView>
   );
 };

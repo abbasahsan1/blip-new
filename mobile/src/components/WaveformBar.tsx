@@ -1,11 +1,6 @@
 import React from 'react';
-import {
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
-import { Colors, Radius, Spacing, Typography } from '../theme/tokens';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { colors, fonts, radii, spacing, typography } from '../theme/theme';
 
 interface WaveformBarProps {
   progress: number; // 0 to 1
@@ -15,10 +10,10 @@ interface WaveformBarProps {
   isPlaying?: boolean;
 }
 
-// Deterministic mock frequency bar heights for dynamic visualizer aesthetics
-const BAR_HEIGHTS = [
-  34, 52, 28, 64, 42, 70, 48, 60, 30, 75, 45, 68, 54, 38, 72, 50, 62, 32, 58, 44,
-  66, 36, 48, 28,
+// 34 fixed deterministic frequency bar heights matching stitch aesthetic
+const WAVEFORM_BAR_HEIGHTS = [
+  16, 28, 44, 22, 54, 34, 62, 38, 20, 48, 68, 42, 26, 58, 46, 30, 52, 36, 60,
+  44, 24, 50, 66, 40, 22, 46, 32, 56, 38, 18, 42, 28, 50, 32,
 ];
 
 function formatTime(totalSeconds: number): string {
@@ -37,7 +32,8 @@ export const WaveformBar: React.FC<WaveformBarProps> = ({
   isPlaying = false,
 }) => {
   const clampedProgress = Math.max(0, Math.min(1, progress));
-  const playedBarCount = Math.floor(clampedProgress * BAR_HEIGHTS.length);
+  const totalBars = WAVEFORM_BAR_HEIGHTS.length;
+  const playedBarCount = Math.floor(clampedProgress * totalBars);
 
   const handlePress = (e: any) => {
     if (!onSeek) return;
@@ -52,33 +48,41 @@ export const WaveformBar: React.FC<WaveformBarProps> = ({
 
   return (
     <View style={styles.container}>
-      {/* Header Telemetry */}
+      {/* Waveform Telemetry Header */}
       <View style={styles.telemetryRow}>
-        <Text style={styles.telemetryAmber}>LIVE SPECTRUM</Text>
+        <Text style={styles.telemetryTitle}>LIVE INGESTION SPECTRUM</Text>
         <View style={styles.syncBadge}>
           <View
             style={[
               styles.syncDot,
-              { backgroundColor: isPlaying ? Colors.secondaryContainer : Colors.outline },
+              {
+                backgroundColor: isPlaying
+                  ? colors.secondary
+                  : colors['outline-variant'],
+              },
             ]}
           />
-          <Text style={styles.telemetryCyan}>
-            {isPlaying ? 'ACTIVE STREAM' : 'PAUSED'}
+          <Text style={styles.telemetryStatus}>
+            {isPlaying ? 'STREAM ACTIVE' : 'PAUSED'}
           </Text>
         </View>
       </View>
 
-      {/* Waveform Bars Container */}
+      {/* Kinetic Audio Waveform Bars Grid */}
       <Pressable onPress={handlePress} style={styles.barsContainer}>
-        {BAR_HEIGHTS.map((height, idx) => {
+        {WAVEFORM_BAR_HEIGHTS.map((height, idx) => {
           const isPlayed = idx < playedBarCount;
-          const isCurrent = idx === playedBarCount;
+          const isScrubHead = idx === playedBarCount && clampedProgress > 0;
 
-          let barColor: string = Colors.surfaceBright;
+          let barColor: string = colors['surface-container-highest'];
+          let opacity = 0.55;
+
           if (isPlayed) {
-            barColor = Colors.primaryContainer; // Electric Amber for played
-          } else if (isCurrent) {
-            barColor = Colors.secondaryContainer; // Electric Cyan cursor
+            barColor = colors['primary-container'];
+            opacity = 1.0;
+          } else if (isScrubHead) {
+            barColor = colors.secondary;
+            opacity = 1.0;
           }
 
           return (
@@ -89,7 +93,7 @@ export const WaveformBar: React.FC<WaveformBarProps> = ({
                 {
                   height,
                   backgroundColor: barColor,
-                  opacity: isPlayed ? 1 : 0.6,
+                  opacity,
                 },
               ]}
             />
@@ -97,7 +101,7 @@ export const WaveformBar: React.FC<WaveformBarProps> = ({
         })}
       </Pressable>
 
-      {/* Progress Track & Timestamps */}
+      {/* Continuous Scrubber Track & Precise Timestamps */}
       <View style={styles.trackContainer}>
         <View style={styles.trackBackground}>
           <View
@@ -108,8 +112,12 @@ export const WaveformBar: React.FC<WaveformBarProps> = ({
           />
         </View>
         <View style={styles.timeRow}>
-          <Text style={styles.timeElapsed}>{formatTime(currentTimeSeconds)}</Text>
-          <Text style={styles.timeTotal}>{formatTime(durationSeconds)}</Text>
+          <Text style={styles.timeElapsed}>
+            {formatTime(currentTimeSeconds)}
+          </Text>
+          <Text style={styles.timeTotal}>
+            {formatTime(durationSeconds)}
+          </Text>
         </View>
       </View>
     </View>
@@ -118,77 +126,82 @@ export const WaveformBar: React.FC<WaveformBarProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: Colors.surfaceContainerLowest,
-    borderRadius: Radius.md,
-    padding: Spacing.md,
-    marginVertical: Spacing.sm,
+    backgroundColor: colors['surface-container-lowest'],
+    borderRadius: radii.lg,
+    padding: spacing[4],
     borderWidth: 1,
-    borderColor: Colors.outlineVariant,
+    borderColor: colors['outline-variant'],
+    marginVertical: spacing[3],
   },
   telemetryRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: Spacing.sm,
+    marginBottom: spacing[2],
   },
-  telemetryAmber: {
-    ...Typography.telemetry,
+  telemetryTitle: {
+    fontFamily: fonts.telemetry,
     fontSize: 10,
-    color: Colors.primaryContainer,
+    letterSpacing: 0.5,
+    color: colors.primary,
+    textTransform: 'uppercase',
   },
   syncBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: spacing[1],
   },
   syncDot: {
     width: 6,
     height: 6,
-    borderRadius: 3,
+    borderRadius: radii.full,
   },
-  telemetryCyan: {
-    ...Typography.telemetry,
+  telemetryStatus: {
+    fontFamily: fonts.telemetry,
     fontSize: 10,
-    color: Colors.secondaryContainer,
+    letterSpacing: 0.5,
+    color: colors.secondary,
+    textTransform: 'uppercase',
   },
   barsContainer: {
-    height: 80,
+    height: 72,
     flexDirection: 'row',
     alignItems: 'flex-end',
     justifyContent: 'space-between',
-    paddingVertical: Spacing.xs,
+    paddingVertical: spacing[1],
   },
   bar: {
-    width: 6,
-    borderRadius: 3,
+    width: 5,
+    borderRadius: radii.full,
   },
   trackContainer: {
-    marginTop: Spacing.sm,
-    gap: Spacing.xs,
+    marginTop: spacing[3],
+    gap: spacing[1],
   },
   trackBackground: {
     height: 4,
-    backgroundColor: Colors.surfaceContainerHighest,
-    borderRadius: 2,
+    backgroundColor: colors['surface-container-highest'],
+    borderRadius: radii.full,
     overflow: 'hidden',
   },
   trackFill: {
     height: '100%',
-    backgroundColor: Colors.primaryContainer,
-    borderRadius: 2,
+    backgroundColor: colors['primary-container'],
+    borderRadius: radii.full,
   },
   timeRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginTop: spacing[1],
   },
   timeElapsed: {
-    ...Typography.telemetry,
-    color: Colors.primaryContainer,
+    ...typography['label-sm'],
+    color: colors.primary,
     fontWeight: '700',
   },
   timeTotal: {
-    ...Typography.telemetry,
-    color: Colors.onSurfaceVariant,
+    ...typography['label-sm'],
+    color: colors['on-surface-variant'],
   },
 });

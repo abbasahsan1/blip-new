@@ -135,6 +135,9 @@ export async function fetchBlippDetailApi(blippId: string): Promise<Blipp> {
 
 // ── Upload ─────────────────────────────────────────────────────────────────
 
+import * as FileSystem from 'expo-file-system/legacy';
+import { Platform } from 'react-native';
+
 export async function uploadBlippApi(
   title: string,
   file: { uri: string; name: string; type?: string }
@@ -147,25 +150,56 @@ export async function uploadBlippApi(
     });
   }
 
-  const formData = new FormData();
-  formData.append('title', title.trim());
+  if (Platform.OS !== 'web') {
+    const res = await FileSystem.uploadAsync(`${API_BASE_URL}/v1/uploads`, file.uri, {
+      fieldName: 'file',
+      httpMethod: 'POST',
+      uploadType: FileSystem.FileSystemUploadType.MULTIPART,
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/json',
+      },
+      parameters: {
+        title: title.trim(),
+      },
+      mimeType: file.type || 'audio/mpeg',
+    });
 
-  // In React Native FormData, files are passed as { uri, name, type }
-  const fileObj: any = {
-    uri: file.uri,
-    name: file.name || 'audio.mp3',
-    type: file.type || 'audio/mpeg',
-  };
-  formData.append('file', fileObj);
+    if (res.status < 200 || res.status >= 300) {
+      let errBody: any;
+      try {
+        errBody = JSON.parse(res.body);
+      } catch {
+        errBody = { error: { code: `${res.status}`, message: res.body || 'Upload failed' } };
+      }
+      const errObj = errBody.error || {
+        code: `${res.status}`,
+        message:
+          typeof errBody.detail === 'string'
+            ? errBody.detail
+            : JSON.stringify(errBody.detail || 'Upload failed'),
+      };
+      throw new ApiRequestError(res.status, errObj);
+    }
 
-  const res = await fetch(`${API_BASE_URL}/v1/uploads`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      // Note: React Native's fetch sets the multipart boundary automatically when passing FormData
-    },
-    body: formData,
-  });
+    return JSON.parse(res.body) as Blipp;
+  } else {
+    // Web fallback using standard Web Blob
+    const response = await fetch(file.uri);
+    const blob = await response.blob();
+    const formData = new FormData();
+    formData.append('title', title.trim());
+    formData.append('file', blob, file.name || 'audio.mp3');
 
-  return handleResponse<Blipp>(res);
+    const res = await fetch(`${API_BASE_URL}/v1/uploads`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: formData,
+    });
+
+    return handleResponse<Blipp>(res);
+  }
 }
+
