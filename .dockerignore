@@ -24,6 +24,8 @@ ENV/
 # ── Test / dev files ──────────────────────────────────────────────────────
 test_audio.mp3
 media/
+mobile/
+design-ref/
 *.sh
 
 # ── Editor and OS noise ───────────────────────────────────────────────────
