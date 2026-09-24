@@ -24,6 +24,14 @@ import { colors } from './src/theme/theme';
 
 export default function App() {
   const [fontsLoaded] = useFonts({
+    'SpaceGrotesk-SemiBold': SpaceGrotesk_600SemiBold,
+    'SpaceGrotesk-Bold': SpaceGrotesk_700Bold,
+    'SpaceGrotesk-Medium': SpaceGrotesk_500Medium,
+    'Inter-Regular': Inter_400Regular,
+    'Inter-Medium': Inter_500Medium,
+    'Inter-SemiBold': Inter_600SemiBold,
+    'JetBrainsMono-Medium': JetBrainsMono_500Medium,
+    'JetBrainsMono-SemiBold': JetBrainsMono_600SemiBold,
     SpaceGrotesk_500Medium,
     SpaceGrotesk_600SemiBold,
     SpaceGrotesk_700Bold,

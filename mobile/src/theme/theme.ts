@@ -41,22 +41,22 @@ export const colors = {
 } as const;
 
 export const fonts = {
-  headline: 'SpaceGrotesk_600SemiBold',
-  headlineBold: 'SpaceGrotesk_700Bold',
-  headlineMedium: 'SpaceGrotesk_500Medium',
-  body: 'Inter_400Regular',
-  bodyMedium: 'Inter_500Medium',
-  bodySemiBold: 'Inter_600SemiBold',
-  telemetry: 'JetBrainsMono_500Medium',
-  label: 'JetBrainsMono_600SemiBold',
+  headline: 'SpaceGrotesk-SemiBold',
+  headlineBold: 'SpaceGrotesk-Bold',
+  headlineMedium: 'SpaceGrotesk-Medium',
+  body: 'Inter-Regular',
+  bodyMedium: 'Inter-Medium',
+  bodySemiBold: 'Inter-SemiBold',
+  telemetry: 'JetBrainsMono-Medium',
+  label: 'JetBrainsMono-SemiBold',
 } as const;
 
 export const radii = {
   md: 8, // 0.5rem
-  lg: 12, // 0.75rem
-  xl: 16, // 1rem
-  '2xl': 20, // 1.25rem
-  full: 9999, // 9999px
+  lg: 8, // 0.5rem (small inner icons)
+  xl: 12, // 0.75rem (rounded-xl: cards, main player, oversized buttons)
+  '2xl': 12, // mapped to 12px for rounded-xl consistency
+  full: 9999, // 9999px (rounded-full)
 } as const;
 
 export const spacing = {
@@ -73,61 +73,147 @@ export const spacing = {
   16: 64,
 } as const;
 
-export const typography = {
-  'display-lg': {
+export const Typography = {
+  displayHeroMobile: {
+    fontFamily: 'SpaceGrotesk-Bold',
     fontSize: 32,
     lineHeight: 38,
     letterSpacing: -0.64,
-    fontFamily: fonts.headlineBold,
   },
-  'headline-lg': {
+  headlineLg: {
+    fontFamily: 'SpaceGrotesk-SemiBold',
     fontSize: 28,
     lineHeight: 34,
     letterSpacing: -0.56,
-    fontFamily: fonts.headline,
   },
-  'headline-md': {
-    fontSize: 20,
-    lineHeight: 26,
-    letterSpacing: -0.2,
-    fontFamily: fonts.headlineBold,
+  headlineMd: {
+    fontFamily: 'SpaceGrotesk-SemiBold',
+    fontSize: 22,
+    lineHeight: 28,
+    letterSpacing: -0.22,
   },
-  'headline-sm': {
+  headlineSm: {
+    fontFamily: 'SpaceGrotesk-SemiBold',
     fontSize: 18,
     lineHeight: 24,
-    letterSpacing: -0.18,
-    fontFamily: fonts.headline,
+    letterSpacing: 0,
   },
-  'body-lg': {
+  transcriptHighlight: {
+    fontFamily: 'Inter-SemiBold',
+    fontSize: 16,
+    lineHeight: 24,
+    letterSpacing: -0.16,
+  },
+  bodyLg: {
+    fontFamily: 'Inter-Regular',
     fontSize: 17,
     lineHeight: 26,
-    letterSpacing: 0,
-    fontFamily: fonts.body,
   },
-  'body-md': {
-    fontSize: 14,
-    lineHeight: 20,
-    letterSpacing: 0,
-    fontFamily: fonts.body,
+  bodyMd: {
+    fontFamily: 'Inter-Regular',
+    fontSize: 15,
+    lineHeight: 22,
   },
-  'body-sm': {
-    fontSize: 12,
-    lineHeight: 16,
-    letterSpacing: 0,
-    fontFamily: fonts.body,
+  bodySm: {
+    fontFamily: 'Inter-Regular',
+    fontSize: 13,
+    lineHeight: 18,
   },
-  'label-sm': {
-    fontSize: 11,
-    lineHeight: 14,
-    letterSpacing: 0.88,
-    fontFamily: fonts.label,
-  },
-  'telemetry-data': {
+  telemetryData: {
+    fontFamily: 'JetBrainsMono-Medium',
     fontSize: 12,
     lineHeight: 16,
     letterSpacing: 0.48,
-    fontFamily: fonts.telemetry,
   },
+  telemetry: {
+    fontFamily: 'JetBrainsMono-Medium',
+    fontSize: 12,
+    lineHeight: 16,
+    letterSpacing: 0.48,
+  },
+  labelCaps: {
+    fontFamily: 'JetBrainsMono-SemiBold',
+    fontSize: 11,
+    lineHeight: 14,
+    letterSpacing: 0.88,
+    textTransform: 'uppercase' as const,
+  },
+  // Kebab-case mappings for backwards compatibility
+  'display-hero-mobile': {
+    fontFamily: 'SpaceGrotesk-Bold',
+    fontSize: 32,
+    lineHeight: 38,
+    letterSpacing: -0.64,
+  },
+  'headline-lg': {
+    fontFamily: 'SpaceGrotesk-SemiBold',
+    fontSize: 28,
+    lineHeight: 34,
+    letterSpacing: -0.56,
+  },
+  'headline-md': {
+    fontFamily: 'SpaceGrotesk-SemiBold',
+    fontSize: 22,
+    lineHeight: 28,
+    letterSpacing: -0.22,
+  },
+  'headline-sm': {
+    fontFamily: 'SpaceGrotesk-SemiBold',
+    fontSize: 18,
+    lineHeight: 24,
+    letterSpacing: 0,
+  },
+  'transcript-highlight': {
+    fontFamily: 'Inter-SemiBold',
+    fontSize: 16,
+    lineHeight: 24,
+    letterSpacing: -0.16,
+  },
+  'body-lg': {
+    fontFamily: 'Inter-Regular',
+    fontSize: 17,
+    lineHeight: 26,
+  },
+  'body-md': {
+    fontFamily: 'Inter-Regular',
+    fontSize: 15,
+    lineHeight: 22,
+  },
+  'body-sm': {
+    fontFamily: 'Inter-Regular',
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  'telemetry-data': {
+    fontFamily: 'JetBrainsMono-Medium',
+    fontSize: 12,
+    lineHeight: 16,
+    letterSpacing: 0.48,
+  },
+  'label-sm': {
+    fontFamily: 'JetBrainsMono-SemiBold',
+    fontSize: 11,
+    lineHeight: 14,
+    letterSpacing: 0.88,
+    textTransform: 'uppercase' as const,
+  },
+} as const;
+
+export const typography = Typography;
+
+export const LayoutMetrics = {
+  headerHeight: 64,
+  bottomNavHeight: 64,
+  miniPlayerHeight: 48,
+  transportPrimaryHeight: 64,
+  transportSecondaryHeight: 48,
+  waveformHeight: 96,
+  waveformBarWidth: 6,
+  waveformGap: 3,
+  radiusCard: 12,
+  radiusButton: 12,
+  radiusBadge: 9999,
+  gutter: 16,
 } as const;
 
 // ── PascalCase Token Bridge for Components ─────────────────────────────────
@@ -165,17 +251,6 @@ export const Colors = {
   success: '#34D399',
 } as const;
 
-export const Typography = {
-  headlineLg: typography['headline-lg'],
-  headlineMd: typography['headline-md'],
-  headlineSm: typography['headline-sm'],
-  bodyLg: typography['body-lg'],
-  bodyMd: typography['body-md'],
-  bodySm: typography['body-sm'],
-  labelCaps: typography['label-sm'],
-  telemetry: typography['telemetry-data'],
-} as const;
-
 export const Spacing = {
   xs: spacing[1],
   sm: spacing[2],
@@ -197,4 +272,4 @@ export type ColorToken = keyof typeof colors;
 export type FontToken = keyof typeof fonts;
 export type RadiusToken = keyof typeof radii;
 export type SpacingToken = keyof typeof spacing;
-export type TypographyToken = keyof typeof typography;
+export type TypographyToken = keyof typeof Typography;

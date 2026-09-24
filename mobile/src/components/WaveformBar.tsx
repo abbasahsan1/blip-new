@@ -1,6 +1,6 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors, fonts, radii, spacing } from '../theme/theme';
+import { colors, LayoutMetrics, Typography } from '../theme/theme';
 
 interface WaveformBarProps {
   progress: number; // 0 to 1
@@ -10,18 +10,18 @@ interface WaveformBarProps {
   isPlaying?: boolean;
 }
 
-// 34 deterministic frequency bar heights for audio visual scrub
+// Fixed deterministic frequency bar heights scaled for 96px container
 const WAVEFORM_BAR_HEIGHTS = [
-  14, 26, 40, 20, 48, 30, 56, 34, 18, 44, 62, 38, 24, 52, 42, 28, 48, 32, 54,
-  40, 22, 46, 58, 36, 20, 42, 28, 50, 34, 16, 38, 24, 46, 28,
+  24, 43, 65, 28, 74, 48, 86, 52, 28, 66, 92, 58, 34, 76, 60, 40, 70, 48, 82,
+  60, 32, 68, 88, 54, 30, 62, 44, 75, 52, 26, 58, 38, 70, 48, 80, 42,
 ];
 
 function formatTime(totalSeconds: number): string {
-  if (isNaN(totalSeconds) || totalSeconds < 0) return '0:00';
+  if (isNaN(totalSeconds) || totalSeconds < 0) return '00:00';
   const mins = Math.floor(totalSeconds / 60);
   const secs = Math.floor(totalSeconds % 60);
   const pad = (n: number) => (n < 10 ? `0${n}` : `${n}`);
-  return `${mins}:${pad(secs)}`;
+  return `${pad(mins)}:${pad(secs)}`;
 }
 
 export const WaveformBar: React.FC<WaveformBarProps> = ({
@@ -29,6 +29,7 @@ export const WaveformBar: React.FC<WaveformBarProps> = ({
   durationSeconds = 0,
   currentTimeSeconds = 0,
   onSeek,
+  isPlaying = false,
 }) => {
   const clampedProgress = Math.max(0, Math.min(1, progress));
   const totalBars = WAVEFORM_BAR_HEIGHTS.length;
@@ -47,10 +48,42 @@ export const WaveformBar: React.FC<WaveformBarProps> = ({
 
   return (
     <View style={styles.container}>
-      {/* Waveform Bars Grid (Breathes directly on canvas) */}
+      {/* Telemetry Header */}
+      <View style={styles.telemetryRow}>
+        <Text style={styles.telemetryAmber}>LIVE SPECTRUM</Text>
+        <View style={styles.syncBadge}>
+          <View
+            style={[
+              styles.syncDot,
+              {
+                backgroundColor: isPlaying
+                  ? colors.secondary
+                  : colors['outline-variant'],
+              },
+            ]}
+          />
+          <Text style={styles.telemetryCyan}>
+            {isPlaying ? 'ACTIVE STREAM' : 'PAUSED'}
+          </Text>
+        </View>
+      </View>
+
+      {/* Kinetic Audio Waveform Bars Grid: h-24 (96px), w-1.5 (6px), gap: 3px */}
       <Pressable onPress={handlePress} style={styles.barsContainer}>
         {WAVEFORM_BAR_HEIGHTS.map((height, idx) => {
           const isPlayed = idx < playedBarCount;
+          const isScrubHead = idx === playedBarCount && clampedProgress > 0;
+
+          let barColor: string = colors['surface-bright'];
+          let opacity = 0.6;
+
+          if (isPlayed) {
+            barColor = colors['primary-container'];
+            opacity = 1.0;
+          } else if (isScrubHead) {
+            barColor = colors.secondary;
+            opacity = 1.0;
+          }
 
           return (
             <View
@@ -59,9 +92,8 @@ export const WaveformBar: React.FC<WaveformBarProps> = ({
                 styles.bar,
                 {
                   height,
-                  backgroundColor: isPlayed
-                    ? colors['primary-container']
-                    : 'rgba(255, 255, 255, 0.16)',
+                  backgroundColor: barColor,
+                  opacity,
                 },
               ]}
             />
@@ -69,18 +101,20 @@ export const WaveformBar: React.FC<WaveformBarProps> = ({
         })}
       </Pressable>
 
-      {/* Scrub Track & Numeric Time Counters */}
+      {/* Scrubber Track & Precise Timestamps */}
       <View style={styles.trackContainer}>
+        {/* Track: h-2 (8px), rounded-full */}
         <View style={styles.trackBackground}>
           <View
             style={[styles.trackFill, { width: `${clampedProgress * 100}%` }]}
           />
         </View>
+        {/* Timestamps: telemetryData font scale (12px, JetBrainsMono-Medium) */}
         <View style={styles.timeRow}>
-          <Text style={styles.timeCounter}>
+          <Text style={styles.timeElapsed}>
             {formatTime(currentTimeSeconds)}
           </Text>
-          <Text style={styles.timeCounter}>
+          <Text style={styles.timeTotal}>
             {formatTime(durationSeconds)}
           </Text>
         </View>
@@ -92,44 +126,78 @@ export const WaveformBar: React.FC<WaveformBarProps> = ({
 const styles = StyleSheet.create({
   container: {
     width: '100%',
-    marginVertical: spacing[4],
+    backgroundColor: colors['surface-container-lowest'],
+    borderRadius: LayoutMetrics.radiusCard, // 12px (rounded-xl)
+    padding: 10,
+    borderWidth: 1,
+    borderColor: colors['outline-variant'],
+    marginVertical: 12,
+  },
+  telemetryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  telemetryAmber: {
+    ...Typography.telemetryData,
+    fontSize: 10,
+    color: colors.primary,
+    fontWeight: '600',
+  },
+  syncBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  syncDot: {
+    width: 6,
+    height: 6,
+    borderRadius: LayoutMetrics.radiusBadge,
+  },
+  telemetryCyan: {
+    ...Typography.telemetryData,
+    fontSize: 10,
+    color: colors.secondary,
   },
   barsContainer: {
-    height: 64,
+    height: LayoutMetrics.waveformHeight, // 96px (h-24)
     flexDirection: 'row',
     alignItems: 'flex-end',
     justifyContent: 'space-between',
-    paddingVertical: spacing[1],
+    paddingVertical: 4,
   },
   bar: {
-    width: 4,
-    borderRadius: radii.full,
+    width: LayoutMetrics.waveformBarWidth, // 6px (w-1.5)
+    borderRadius: LayoutMetrics.radiusBadge, // 9999px
   },
   trackContainer: {
-    marginTop: spacing[3],
-    gap: spacing[1],
+    marginTop: 8,
+    gap: 6,
   },
   trackBackground: {
-    height: 3,
-    backgroundColor: 'rgba(255, 255, 255, 0.12)',
-    borderRadius: radii.full,
+    height: 8, // h-2 (8px)
+    backgroundColor: colors['surface-container-high'],
+    borderRadius: LayoutMetrics.radiusBadge, // 9999px
     overflow: 'hidden',
   },
   trackFill: {
     height: '100%',
     backgroundColor: colors['primary-container'],
-    borderRadius: radii.full,
+    borderRadius: LayoutMetrics.radiusBadge,
   },
   timeRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: spacing[1],
   },
-  timeCounter: {
-    fontFamily: fonts.telemetry, // JetBrains Mono reserved specifically for numeric time
-    fontSize: 12,
+  timeElapsed: {
+    ...Typography.telemetryData,
+    color: colors.primary,
+    fontWeight: '600',
+  },
+  timeTotal: {
+    ...Typography.telemetryData,
     color: colors['on-surface-variant'],
-    letterSpacing: 0.2,
   },
 });

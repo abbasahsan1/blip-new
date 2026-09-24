@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, Pressable, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { colors, fonts, radii, spacing } from '../theme/theme';
+import { colors, LayoutMetrics, Typography } from '../theme/theme';
 
 interface BottomNavProps {
   currentRoute: 'Feed' | 'Upload';
@@ -82,36 +82,35 @@ export const BottomNav: React.FC<BottomNavProps> = ({ currentRoute, onNavigate }
 
 const styles = StyleSheet.create({
   container: {
-    height: 64,
+    height: LayoutMetrics.bottomNavHeight, // 64px
     backgroundColor: colors['surface-container-lowest'],
     borderTopWidth: 1,
     borderTopColor: colors['outline-variant'],
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
-    paddingHorizontal: spacing[4],
+    paddingHorizontal: LayoutMetrics.gutter,
   },
   tab: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: spacing[2],
+    paddingVertical: 8,
     position: 'relative',
   },
   tabIcon: {
-    marginBottom: spacing[1],
+    marginBottom: 4,
   },
   tabText: {
-    fontFamily: fonts.label,
+    ...Typography.labelCaps,
     fontSize: 11,
-    letterSpacing: 1.2,
   },
   activeIndicator: {
     position: 'absolute',
-    bottom: -spacing[1],
+    bottom: -4,
     width: 20,
     height: 2,
     backgroundColor: colors['primary-container'],
-    borderRadius: radii.full,
+    borderRadius: LayoutMetrics.radiusBadge,
   },
 });
