@@ -203,3 +203,29 @@ export async function uploadBlippApi(
   }
 }
 
+export const uploadBlip = async (
+  titleOrFormData: string | FormData,
+  file?: { uri: string; name: string; type?: string }
+): Promise<Blipp> => {
+  if (typeof titleOrFormData === 'string' && file) {
+    return uploadBlippApi(titleOrFormData, file);
+  } else if (titleOrFormData instanceof FormData) {
+    let title = 'Untitled Blipp';
+    let fileObj: any = null;
+    // @ts-ignore
+    const parts = (titleOrFormData as any)._parts || [];
+    for (const [key, val] of parts) {
+      if (key === 'title') title = val;
+      if (key === 'file' || key === 'audio') fileObj = val;
+    }
+    if (fileObj && fileObj.uri) {
+      return uploadBlippApi(title, {
+        uri: fileObj.uri,
+        name: fileObj.name || 'audio.mp3',
+        type: fileObj.type || 'audio/mpeg',
+      });
+    }
+  }
+  throw new Error('Invalid upload parameters');
+};
+
