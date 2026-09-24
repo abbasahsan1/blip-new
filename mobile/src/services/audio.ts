@@ -1,21 +1,18 @@
-import { Audio, InterruptionModeAndroid, InterruptionModeIOS } from 'expo-av';
+import { setAudioModeAsync } from 'expo-audio';
 
 let isConfigured = false;
 
 /**
- * Configure global audio session for background playback and silent-mode bypass.
- * Critical for uninterrupted hands-free commuter playback.
+ * Configure global audio session for background playback and silent-mode bypass using expo-audio.
+ * Critical for uninterrupted hands-free commuter playback with screen locked.
  */
 export async function setupAudioMode(): Promise<void> {
   if (isConfigured) return;
   try {
-    await Audio.setAudioModeAsync({
-      staysActiveInBackground: true,
-      playsInSilentModeIOS: true,
-      interruptionModeIOS: InterruptionModeIOS.DoNotMix,
-      shouldDuckAndroid: true,
-      interruptionModeAndroid: InterruptionModeAndroid.DoNotMix,
-      playThroughEarpieceAndroid: false,
+    await setAudioModeAsync({
+      playsInSilentMode: true,
+      shouldPlayInBackground: true,
+      interruptionMode: 'doNotMix',
     });
     isConfigured = true;
   } catch (err) {

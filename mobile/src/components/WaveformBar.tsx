@@ -10,7 +10,7 @@ import { Colors, Radius, Spacing, Typography } from '../theme/tokens';
 interface WaveformBarProps {
   progress: number; // 0 to 1
   durationSeconds: number;
-  positionMillis: number;
+  currentTimeSeconds: number;
   onSeek?: (ratio: number) => void;
   isPlaying?: boolean;
 }
@@ -32,19 +32,16 @@ function formatTime(totalSeconds: number): string {
 export const WaveformBar: React.FC<WaveformBarProps> = ({
   progress = 0,
   durationSeconds = 0,
-  positionMillis = 0,
+  currentTimeSeconds = 0,
   onSeek,
   isPlaying = false,
 }) => {
   const clampedProgress = Math.max(0, Math.min(1, progress));
   const playedBarCount = Math.floor(clampedProgress * BAR_HEIGHTS.length);
 
-  const elapsedSeconds = positionMillis / 1000;
-
   const handlePress = (e: any) => {
     if (!onSeek) return;
     const { locationX } = e.nativeEvent;
-    // Calculate ratio from width
     e.target.measure((_x: number, _y: number, width: number) => {
       if (width > 0) {
         const ratio = Math.max(0, Math.min(1, locationX / width));
@@ -111,7 +108,7 @@ export const WaveformBar: React.FC<WaveformBarProps> = ({
           />
         </View>
         <View style={styles.timeRow}>
-          <Text style={styles.timeElapsed}>{formatTime(elapsedSeconds)}</Text>
+          <Text style={styles.timeElapsed}>{formatTime(currentTimeSeconds)}</Text>
           <Text style={styles.timeTotal}>{formatTime(durationSeconds)}</Text>
         </View>
       </View>

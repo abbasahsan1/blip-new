@@ -10,7 +10,7 @@ import {
   ViewToken,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Audio, AVPlaybackStatus } from 'expo-av';
+import { createAudioPlayer, AudioPlayer, AudioStatus } from 'expo-audio';
 import { Header } from '../components/Header';
 import { WaveformBar } from '../components/WaveformBar';
 import { PrimaryButton } from '../components/PrimaryButton';
@@ -29,10 +29,10 @@ export const FeedScreen = ({ navigation }: any) => {
   const [activeIndex, setActiveIndex] = useState(0);
 
   // Playback state
-  const soundRef = useRef<Audio.Sound | null>(null);
+  const playerRef = useRef<AudioPlayer | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [positionMillis, setPositionMillis] = useState(0);
-  const [durationMillis, setDurationMillis] = useState(1);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(1);
   const [audioLoading, setAudioLoading] = useState(false);
 
   const flatListRef = useRef<FlatList<Blipp>>(null);
@@ -81,33 +81,45 @@ export const FeedScreen = ({ navigation }: any) => {
     }
   }, [activeIndex, blipps.length]);
 
-  const stopAndUnload = async () => {
-    if (soundRef.current) {
+  const stopAndUnload = () => {
+    if (playerRef.current) {
       try {
-        await soundRef.current.stopAsync();
-        await soundRef.current.unloadAsync();
+        playerRef.current.pause();
+        playerRef.current.remove();
       } catch {
         // ignore
       }
-      soundRef.current = null;
+      playerRef.current = null;
     }
   };
 
-  const playCurrentBlipp = async (blipp: Blipp) => {
+  const playCurrentBlipp = (blipp: Blipp) => {
     setAudioLoading(true);
-    setPositionMillis(0);
-    setDurationMillis((blipp.duration_seconds || 1) * 1000);
+    setCurrentTime(0);
+    setDuration(blipp.duration_seconds || 1);
     setIsPlaying(false);
 
-    await stopAndUnload();
+    stopAndUnload();
 
     try {
-      const { sound } = await Audio.Sound.createAsync(
-        { uri: blipp.audio_url },
-        { shouldPlay: true },
-        onPlaybackStatusUpdate
-      );
-      soundRef.current = sound;
+      const player = createAudioPlayer(blipp.audio_url, { updateInterval: 250 });
+      playerRef.current = player;
+
+      player.addListener('playbackStatusUpdate', (status: AudioStatus) => {
+        setCurrentTime(status.currentTime);
+        if (status.duration > 0) {
+          setDuration(status.duration);
+        }
+        setIsPlaying(status.playing);
+        setAudioLoading(!status.isLoaded && !status.playing);
+
+        // Auto-advance when audio finishes!
+        if (status.didJustFinish) {
+          advanceNext();
+        }
+      });
+
+      player.play();
       setIsPlaying(true);
     } catch (err) {
       console.warn('Error loading audio stream:', err);
@@ -116,34 +128,14 @@ export const FeedScreen = ({ navigation }: any) => {
     }
   };
 
-  const onPlaybackStatusUpdate = (status: AVPlaybackStatus) => {
-    if (!status.isLoaded) {
-      if (status.error) {
-        console.warn(`Playback error: ${status.error}`);
-      }
-      return;
-    }
-
-    setPositionMillis(status.positionMillis);
-    if (status.durationMillis) {
-      setDurationMillis(status.durationMillis);
-    }
-    setIsPlaying(status.isPlaying);
-
-    // Auto-advance when audio finishes!
-    if (status.didJustFinish) {
-      advanceNext();
-    }
-  };
-
-  const togglePlayPause = async () => {
-    if (!soundRef.current) return;
+  const togglePlayPause = () => {
+    if (!playerRef.current) return;
     try {
       if (isPlaying) {
-        await soundRef.current.pauseAsync();
+        playerRef.current.pause();
         setIsPlaying(false);
       } else {
-        await soundRef.current.playAsync();
+        playerRef.current.play();
         setIsPlaying(true);
       }
     } catch (err) {
@@ -160,22 +152,22 @@ export const FeedScreen = ({ navigation }: any) => {
   };
 
   const replay15s = async () => {
-    if (!soundRef.current) return;
-    const newPos = Math.max(0, positionMillis - 15000);
+    if (!playerRef.current) return;
+    const newPos = Math.max(0, currentTime - 15);
     try {
-      await soundRef.current.setPositionAsync(newPos);
-      setPositionMillis(newPos);
+      await playerRef.current.seekTo(newPos);
+      setCurrentTime(newPos);
     } catch (err) {
       console.warn('Replay error:', err);
     }
   };
 
   const handleSeek = async (ratio: number) => {
-    if (!soundRef.current || durationMillis <= 0) return;
-    const targetMillis = Math.floor(ratio * durationMillis);
+    if (!playerRef.current || duration <= 0) return;
+    const targetSeconds = ratio * duration;
     try {
-      await soundRef.current.setPositionAsync(targetMillis);
-      setPositionMillis(targetMillis);
+      await playerRef.current.seekTo(targetSeconds);
+      setCurrentTime(targetSeconds);
     } catch (err) {
       console.warn('Seek error:', err);
     }
@@ -199,8 +191,8 @@ export const FeedScreen = ({ navigation }: any) => {
 
   const renderBlippCard = ({ item, index }: { item: Blipp; index: number }) => {
     const isActive = index === activeIndex;
-    const progressRatio = durationMillis > 0 ? positionMillis / durationMillis : 0;
-    const durationSec = item.duration_seconds || durationMillis / 1000;
+    const progressRatio = duration > 0 ? currentTime / duration : 0;
+    const durationSec = item.duration_seconds || duration;
 
     return (
       <View style={[styles.cardContainer, { height: ITEM_HEIGHT }]}>
@@ -233,7 +225,7 @@ export const FeedScreen = ({ navigation }: any) => {
           <WaveformBar
             progress={isActive ? progressRatio : 0}
             durationSeconds={durationSec}
-            positionMillis={isActive ? positionMillis : 0}
+            currentTimeSeconds={isActive ? currentTime : 0}
             onSeek={isActive ? handleSeek : undefined}
             isPlaying={isActive && isPlaying}
           />
