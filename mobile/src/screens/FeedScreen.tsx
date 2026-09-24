@@ -15,7 +15,7 @@ import { createAudioPlayer, AudioPlayer, AudioStatus } from 'expo-audio';
 import { Header } from '../components/Header';
 import { WaveformBar } from '../components/WaveformBar';
 import { BottomNav } from '../components/BottomNav';
-import { Blipp, fetchFeedApi } from '../services/api';
+import { Blipp, fetchFeedApi, toggleLikeApi, toggleSaveApi } from '../services/api';
 import { setupAudioMode } from '../services/audio';
 import { Colors, Metrics, Typography } from '../theme/tokens';
 
@@ -36,9 +36,73 @@ export const FeedScreen = ({ navigation }: any) => {
   const [duration, setDuration] = useState(1);
   const [audioLoading, setAudioLoading] = useState(false);
 
+  // Non-blocking toast state
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const toastTimerRef = useRef<any>(null);
+
   const flatListRef = useRef<FlatList<Blipp>>(null);
   const activeIndexRef = useRef(0);
   const blippsRef = useRef<Blipp[]>([]);
+
+  const showToast = (msg: string) => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    setToastMessage(msg);
+    toastTimerRef.current = setTimeout(() => {
+      setToastMessage(null);
+    }, 2500);
+  };
+
+  const handleToggleLike = async (blippId: string) => {
+    const currentItem = blipps.find((b) => b.id === blippId);
+    const previousLiked = !!currentItem?.liked;
+    const nextLiked = !previousLiked;
+
+    // Optimistic UI toggle
+    setBlipps((prev) =>
+      prev.map((b) => (b.id === blippId ? { ...b, liked: nextLiked } : b))
+    );
+
+    try {
+      const res = await toggleLikeApi(blippId);
+      if (res.liked !== nextLiked) {
+        setBlipps((prev) =>
+          prev.map((b) => (b.id === blippId ? { ...b, liked: res.liked } : b))
+        );
+      }
+    } catch (err: any) {
+      // Revert optimistic update on failure
+      setBlipps((prev) =>
+        prev.map((b) => (b.id === blippId ? { ...b, liked: previousLiked } : b))
+      );
+      showToast(err?.message || 'Failed to update like');
+    }
+  };
+
+  const handleToggleSave = async (blippId: string) => {
+    const currentItem = blipps.find((b) => b.id === blippId);
+    const previousSaved = !!currentItem?.saved;
+    const nextSaved = !previousSaved;
+
+    // Optimistic UI toggle
+    setBlipps((prev) =>
+      prev.map((b) => (b.id === blippId ? { ...b, saved: nextSaved } : b))
+    );
+
+    try {
+      const res = await toggleSaveApi(blippId);
+      if (res.saved !== nextSaved) {
+        setBlipps((prev) =>
+          prev.map((b) => (b.id === blippId ? { ...b, saved: res.saved } : b))
+        );
+      }
+    } catch (err: any) {
+      // Revert optimistic update on failure
+      setBlipps((prev) =>
+        prev.map((b) => (b.id === blippId ? { ...b, saved: previousSaved } : b))
+      );
+      showToast(err?.message || 'Failed to update save');
+    }
+  };
 
   useEffect(() => {
     activeIndexRef.current = activeIndex;
@@ -54,6 +118,7 @@ export const FeedScreen = ({ navigation }: any) => {
     loadFeed();
     return () => {
       stopAndUnload();
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
     };
   }, []);
 
@@ -318,20 +383,59 @@ export const FeedScreen = ({ navigation }: any) => {
 
             {/* Secondary Glanceable Action Row: 48px Rectangles */}
             <View style={styles.transportRowSecondary}>
-              <TouchableOpacity style={styles.deckActionBtn} activeOpacity={0.85}>
-                <MaterialIcons name="cloud-download" size={18} color="#00eefc" />
-                <Text style={styles.deckActionText}>CACHED</Text>
+              {/* Like Button */}
+              <TouchableOpacity
+                style={[
+                  styles.deckActionBtn,
+                  item.liked && styles.deckActionBtnLiked,
+                ]}
+                onPress={() => handleToggleLike(item.id)}
+                activeOpacity={0.8}
+              >
+                <MaterialIcons
+                  name={item.liked ? 'favorite' : 'favorite-border'}
+                  size={18}
+                  color={item.liked ? Colors.primaryContainer : Colors.onSurfaceVariant}
+                />
+                <Text
+                  style={[
+                    styles.deckActionText,
+                    item.liked && styles.deckActionTextLiked,
+                  ]}
+                >
+                  {item.liked ? 'LIKED' : 'LIKE'}
+                </Text>
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.deckActionBtn} activeOpacity={0.85}>
-                <MaterialIcons name="bolt" size={18} color="#ff6b35" />
-                <Text style={styles.deckActionText}>BOOST • 1.4K</Text>
+              {/* Save Button */}
+              <TouchableOpacity
+                style={[
+                  styles.deckActionBtn,
+                  item.saved && styles.deckActionBtnSaved,
+                ]}
+                onPress={() => handleToggleSave(item.id)}
+                activeOpacity={0.8}
+              >
+                <MaterialIcons
+                  name={item.saved ? 'bookmark' : 'bookmark-border'}
+                  size={18}
+                  color={item.saved ? Colors.secondaryContainer : Colors.onSurfaceVariant}
+                />
+                <Text
+                  style={[
+                    styles.deckActionText,
+                    item.saved && styles.deckActionTextSaved,
+                  ]}
+                >
+                  {item.saved ? 'SAVED' : 'SAVE'}
+                </Text>
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.deckActionBtn} activeOpacity={0.85}>
-                <MaterialIcons name="queue-music" size={18} color="#bdc6dd" />
+              {/* Queue Indicator */}
+              <View style={styles.deckActionBtn}>
+                <MaterialIcons name="queue-music" size={18} color={Colors.onSurfaceVariant} />
                 <Text style={styles.deckActionText}>QUEUE ({blipps.length})</Text>
-              </TouchableOpacity>
+              </View>
             </View>
           </View>
         </View>
@@ -342,6 +446,16 @@ export const FeedScreen = ({ navigation }: any) => {
   return (
     <SafeAreaView style={styles.safeArea}>
       <Header />
+
+      {/* Non-blocking Toast Notification */}
+      {toastMessage && (
+        <View style={styles.toastContainer} pointerEvents="none">
+          <View style={styles.toastBanner}>
+            <MaterialIcons name="info-outline" size={16} color={Colors.primary} />
+            <Text style={styles.toastText}>{toastMessage}</Text>
+          </View>
+        </View>
+      )}
 
       {loading ? (
         <View style={styles.centerContainer}>
@@ -608,5 +722,50 @@ const styles = StyleSheet.create({
     ...Typography.labelCaps,
     fontSize: 13,
     color: Colors.onPrimaryContainer,
+  },
+  deckActionBtnLiked: {
+    borderColor: 'rgba(255, 107, 53, 0.4)',
+    borderWidth: 1,
+    backgroundColor: 'rgba(255, 107, 53, 0.08)',
+  },
+  deckActionTextLiked: {
+    color: Colors.primary,
+  },
+  deckActionBtnSaved: {
+    borderColor: 'rgba(0, 238, 252, 0.4)',
+    borderWidth: 1,
+    backgroundColor: 'rgba(0, 238, 252, 0.08)',
+  },
+  deckActionTextSaved: {
+    color: Colors.secondaryContainer,
+  },
+  toastContainer: {
+    position: 'absolute',
+    top: Metrics.headerHeight + 8,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    zIndex: 999,
+  },
+  toastBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: Colors.surfaceContainerHighest,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: Metrics.radiusLg,
+    borderWidth: 1,
+    borderColor: Colors.outlineVariant,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  toastText: {
+    ...Typography.telemetryData,
+    color: Colors.onSurface,
+    fontSize: 12,
   },
 });

@@ -10,6 +10,8 @@ export interface Blipp {
   audio_url: string;
   duration_seconds: number | null;
   created_at: string;
+  liked?: boolean;
+  saved?: boolean;
 }
 
 export interface FeedResponse {
@@ -112,25 +114,79 @@ export async function fetchFeedApi(
     url += `&cursor=${encodeURIComponent(cursor)}`;
   }
 
+  const token = await getToken();
+  const headers: Record<string, string> = {
+    Accept: 'application/json',
+  };
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
   const res = await fetch(url, {
     method: 'GET',
-    headers: {
-      Accept: 'application/json',
-    },
+    headers,
   });
 
   return handleResponse<FeedResponse>(res);
 }
 
 export async function fetchBlippDetailApi(blippId: string): Promise<Blipp> {
+  const token = await getToken();
+  const headers: Record<string, string> = {
+    Accept: 'application/json',
+  };
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
   const res = await fetch(`${API_BASE_URL}/v1/blipps/${blippId}`, {
     method: 'GET',
+    headers,
+  });
+
+  return handleResponse<Blipp>(res);
+}
+
+// ── Likes and Saves ────────────────────────────────────────────────────────
+
+export async function toggleLikeApi(blippId: string): Promise<{ liked: boolean }> {
+  const token = await getToken();
+  if (!token) {
+    throw new ApiRequestError(401, {
+      code: 'UNAUTHORIZED',
+      message: 'Please sign in to like blipps.',
+    });
+  }
+
+  const res = await fetch(`${API_BASE_URL}/v1/blipps/${blippId}/like`, {
+    method: 'POST',
     headers: {
+      Authorization: `Bearer ${token}`,
       Accept: 'application/json',
     },
   });
 
-  return handleResponse<Blipp>(res);
+  return handleResponse<{ liked: boolean }>(res);
+}
+
+export async function toggleSaveApi(blippId: string): Promise<{ saved: boolean }> {
+  const token = await getToken();
+  if (!token) {
+    throw new ApiRequestError(401, {
+      code: 'UNAUTHORIZED',
+      message: 'Please sign in to save blipps.',
+    });
+  }
+
+  const res = await fetch(`${API_BASE_URL}/v1/blipps/${blippId}/save`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: 'application/json',
+    },
+  });
+
+  return handleResponse<{ saved: boolean }>(res);
 }
 
 // ── Upload ─────────────────────────────────────────────────────────────────
