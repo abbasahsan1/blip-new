@@ -3,9 +3,9 @@ import { StyleSheet, Text, Pressable, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { colors, LayoutMetrics, Typography } from '../theme/theme';
 
-interface BottomNavProps {
-  currentRoute: 'Feed' | 'Upload';
-  onNavigate: (route: 'Feed' | 'Upload') => void;
+export interface BottomNavProps {
+  currentRoute: 'Feed' | 'Saved' | 'Upload';
+  onNavigate: (route: 'Feed' | 'Saved' | 'Upload') => void;
 }
 
 export const BottomNav: React.FC<BottomNavProps> = ({ currentRoute, onNavigate }) => {
@@ -42,6 +42,46 @@ export const BottomNav: React.FC<BottomNavProps> = ({ currentRoute, onNavigate }
           FEED
         </Text>
         {currentRoute === 'Feed' && <View style={styles.activeIndicator} />}
+      </Pressable>
+
+      {/* Saved Tab */}
+      <Pressable
+        style={styles.tab}
+        onPress={() => onNavigate('Saved')}
+        accessibilityRole="button"
+        accessibilityLabel="Saved Tab"
+      >
+        <MaterialCommunityIcons
+          name="bookmark-outline"
+          size={22}
+          color={
+            currentRoute === 'Saved'
+              ? colors['secondary-container']
+              : colors['on-surface-variant']
+          }
+          style={styles.tabIcon}
+        />
+        <Text
+          style={[
+            styles.tabText,
+            {
+              color:
+                currentRoute === 'Saved'
+                  ? colors['secondary-container']
+                  : colors['on-surface-variant'],
+            },
+          ]}
+        >
+          SAVED
+        </Text>
+        {currentRoute === 'Saved' && (
+          <View
+            style={[
+              styles.activeIndicator,
+              { backgroundColor: colors['secondary-container'] },
+            ]}
+          />
+        )}
       </Pressable>
 
       {/* Upload Tab */}

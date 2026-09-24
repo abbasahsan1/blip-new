@@ -237,12 +237,12 @@ export function UploadScreen() {
         </TouchableOpacity>
       </ScrollView>
 
-      {/* Persistent 2-Tab Navigation */}
+      {/* Persistent 3-Tab Navigation */}
       <BottomNav
         currentRoute="Upload"
         onNavigate={(route) => {
-          if (route === 'Feed') {
-            navigation.navigate('Feed');
+          if (route !== 'Upload') {
+            navigation.navigate(route);
           }
         }}
       />

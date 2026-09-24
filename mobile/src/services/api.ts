@@ -189,6 +189,34 @@ export async function toggleSaveApi(blippId: string): Promise<{ saved: boolean }
   return handleResponse<{ saved: boolean }>(res);
 }
 
+export async function fetchSavesApi(
+  cursor?: string | null,
+  limit: number = 20
+): Promise<FeedResponse> {
+  const token = await getToken();
+  if (!token) {
+    throw new ApiRequestError(401, {
+      code: 'UNAUTHORIZED',
+      message: 'Please sign in to view saved blipps.',
+    });
+  }
+
+  let url = `${API_BASE_URL}/v1/saves?limit=${limit}`;
+  if (cursor) {
+    url += `&cursor=${encodeURIComponent(cursor)}`;
+  }
+
+  const res = await fetch(url, {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: 'application/json',
+    },
+  });
+
+  return handleResponse<FeedResponse>(res);
+}
+
 // ── Upload ─────────────────────────────────────────────────────────────────
 
 import * as FileSystem from 'expo-file-system/legacy';

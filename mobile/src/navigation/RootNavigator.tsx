@@ -7,6 +7,7 @@ import { LoginScreen } from '../screens/LoginScreen';
 import { SignupScreen } from '../screens/SignupScreen';
 import { FeedScreen } from '../screens/FeedScreen';
 import { UploadScreen } from '../screens/UploadScreen';
+import { SavedScreen } from '../screens/SavedScreen';
 import { Colors } from '../theme/tokens';
 
 const Stack = createNativeStackNavigator();
@@ -48,6 +49,7 @@ export const RootNavigator = () => {
         {token ? (
           <>
             <Stack.Screen name="Feed" component={FeedScreen} />
+            <Stack.Screen name="Saved" component={SavedScreen} />
             <Stack.Screen
               name="Upload"
               component={UploadScreen}

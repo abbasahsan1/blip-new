@@ -331,7 +331,7 @@ export const FeedScreen = ({ navigation }: any) => {
                 disabled={!isActive}
                 activeOpacity={0.85}
               >
-                <MaterialIcons name="replay-10" size={24} color="#dfe2ee" />
+                <MaterialIcons name="replay" size={24} color="#dfe2ee" />
                 <Text style={styles.transportBtnSubtext}>-15S</Text>
               </TouchableOpacity>
 
@@ -430,12 +430,6 @@ export const FeedScreen = ({ navigation }: any) => {
                   {item.saved ? 'SAVED' : 'SAVE'}
                 </Text>
               </TouchableOpacity>
-
-              {/* Queue Indicator */}
-              <View style={styles.deckActionBtn}>
-                <MaterialIcons name="queue-music" size={18} color={Colors.onSurfaceVariant} />
-                <Text style={styles.deckActionText}>QUEUE ({blipps.length})</Text>
-              </View>
             </View>
           </View>
         </View>
@@ -501,12 +495,12 @@ export const FeedScreen = ({ navigation }: any) => {
         />
       )}
 
-      {/* 2-Tab Navigation */}
+      {/* 3-Tab Navigation */}
       <BottomNav
         currentRoute="Feed"
         onNavigate={(route) => {
-          if (route === 'Upload') {
-            navigation.navigate('Upload');
+          if (route !== 'Feed') {
+            navigation.navigate(route);
           }
         }}
       />
