@@ -328,7 +328,8 @@ async def get_feed(
 
     if cursor:
         try:
-            cursor_dt = datetime.fromisoformat(cursor.replace("Z", "+00:00"))
+            clean_cursor = cursor.strip().replace(" ", "+").replace("Z", "+00:00")
+            cursor_dt = datetime.fromisoformat(clean_cursor)
         except ValueError:
             raise HTTPException(
                 status_code=400,
@@ -512,4 +513,92 @@ async def toggle_save(
             )).scalar_one_or_none()
             return SaveOut(saved=(check is not None))
         return SaveOut(saved=True)
+
+
+# ---------------------------------------------------------------------------
+# Saved Blipps (Authenticated)
+# ---------------------------------------------------------------------------
+
+@router.get("/v1/saves", response_model=FeedPage)
+async def get_saves(
+    current_user: CurrentUser,
+    session: SessionDep,
+    cursor: Optional[str] = None,
+    limit: int = 20,
+):
+    limit = min(max(limit, 1), 100)
+
+    # Join Save with Blipp, ordered by Save.created_at descending (most recently saved first)
+    stmt = (
+        select(Save, Blipp)
+        .join(Blipp, Save.blipp_id == Blipp.id)
+        .where(Save.user_id == current_user.id)
+        .order_by(Save.created_at.desc())
+    )
+
+    if cursor:
+        try:
+            clean_cursor = cursor.strip().replace(" ", "+").replace("Z", "+00:00")
+            cursor_dt = datetime.fromisoformat(clean_cursor)
+        except ValueError:
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": {
+                        "code": "BAD_CURSOR",
+                        "message": "cursor must be an ISO 8601 timestamp",
+                        "request_id": None,
+                    }
+                },
+            )
+        stmt = stmt.where(Save.created_at < cursor_dt)
+
+    stmt = stmt.limit(limit)
+    rows = (await session.execute(stmt)).all()
+
+    if not rows:
+        return FeedPage(items=[], next_cursor=None)
+
+    saves = [r[0] for r in rows]
+    blipps = [r[1] for r in rows]
+
+    # Batch-fetch creator usernames
+    creator_ids = list({b.creator_id for b in blipps})
+    username_map: dict[uuid.UUID, str] = {}
+    if creator_ids:
+        users_result = await session.execute(
+            select(User).where(User.id.in_(creator_ids))
+        )
+        username_map = {
+            u.id: u.username for u in users_result.scalars().all()
+        }
+
+    # Batch-fetch liked status for these blipps
+    blipp_ids = [b.id for b in blipps]
+    likes_result = await session.execute(
+        select(Like.blipp_id).where(
+            (Like.user_id == current_user.id) & (Like.blipp_id.in_(blipp_ids))
+        )
+    )
+    liked_ids = set(likes_result.scalars().all())
+
+    items = [
+        _blipp_out(
+            b,
+            username_map.get(b.creator_id, "unknown"),
+            liked=(b.id in liked_ids),
+            saved=True,
+        )
+        for b in blipps
+    ]
+
+    next_cursor: Optional[str] = None
+    if len(rows) == limit:
+        last_dt = saves[-1].created_at
+        if last_dt.tzinfo is None:
+            last_dt = last_dt.replace(tzinfo=timezone.utc)
+        next_cursor = last_dt.isoformat()
+
+    return FeedPage(items=items, next_cursor=next_cursor)
+
 
