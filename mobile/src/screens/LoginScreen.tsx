@@ -176,8 +176,8 @@ const styles = StyleSheet.create({
   },
   errorText: {
     ...Typography.bodyMd,
+    fontFamily: 'Inter-SemiBold',
     color: Colors.error,
-    fontWeight: '500',
   },
   card: {
     backgroundColor: Colors.surfaceContainer,
@@ -196,9 +196,9 @@ const styles = StyleSheet.create({
   },
   input: {
     backgroundColor: Colors.surfaceContainerLowest,
-    borderRadius: Radius.sm,
+    borderRadius: Radius.lg,
     borderWidth: 1,
-    borderColor: Colors.outline,
+    borderColor: Colors.outlineVariant,
     height: 48,
     paddingHorizontal: Spacing.md,
     color: Colors.onSurface,
@@ -219,7 +219,7 @@ const styles = StyleSheet.create({
   },
   linkText: {
     ...Typography.bodyMd,
+    fontFamily: 'Inter-SemiBold',
     color: Colors.primaryContainer,
-    fontWeight: '700',
   },
 });

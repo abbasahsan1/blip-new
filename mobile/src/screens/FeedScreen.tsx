@@ -3,24 +3,24 @@ import {
   ActivityIndicator,
   Dimensions,
   FlatList,
-  Pressable,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
   ViewToken,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { MaterialIcons } from '@expo/vector-icons';
 import { createAudioPlayer, AudioPlayer, AudioStatus } from 'expo-audio';
 import { Header } from '../components/Header';
 import { WaveformBar } from '../components/WaveformBar';
 import { BottomNav } from '../components/BottomNav';
 import { Blipp, fetchFeedApi } from '../services/api';
 import { setupAudioMode } from '../services/audio';
-import { colors, LayoutMetrics, Typography } from '../theme/theme';
+import { Colors, Metrics, Typography } from '../theme/tokens';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
-const ITEM_HEIGHT = SCREEN_HEIGHT - LayoutMetrics.headerHeight - LayoutMetrics.bottomNavHeight;
+const ITEM_HEIGHT = SCREEN_HEIGHT - Metrics.headerHeight - Metrics.bottomNavHeight;
 
 export const FeedScreen = ({ navigation }: any) => {
   const [blipps, setBlipps] = useState<Blipp[]>([]);
@@ -166,11 +166,14 @@ export const FeedScreen = ({ navigation }: any) => {
     }
   };
 
-  const advancePrev = () => {
-    if (activeIndex > 0) {
-      const prevIdx = activeIndex - 1;
-      setActiveIndex(prevIdx);
-      flatListRef.current?.scrollToIndex({ index: prevIdx, animated: true });
+  const replay15s = async () => {
+    if (!playerRef.current) return;
+    const target = Math.max(0, currentTime - 15);
+    try {
+      await playerRef.current.seekTo(target);
+      setCurrentTime(target);
+    } catch (err) {
+      console.warn('Replay error:', err);
     }
   };
 
@@ -252,105 +255,84 @@ export const FeedScreen = ({ navigation }: any) => {
             isPlaying={isActive && isPlaying}
           />
 
-          {/* Chunky Transport Deck: height: 64px, col-span-2 center button, rounded-xl (12px) */}
-          <View style={styles.transportDeck}>
-            {/* Skip Previous Button */}
-            <Pressable
-              onPress={advancePrev}
-              disabled={!isActive || index === 0}
-              style={({ pressed }) => [
-                styles.transportSideBtn,
-                (!isActive || index === 0) && styles.btnDisabled,
-                pressed && styles.btnPressed,
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel="Previous track"
-            >
-              <MaterialCommunityIcons
-                name="skip-previous"
-                size={24}
-                color={
-                  !isActive || index === 0
-                    ? colors['on-surface-variant']
-                    : colors['on-surface']
-                }
-              />
-              <Text
-                style={[
-                  styles.sideBtnLabel,
-                  (!isActive || index === 0) && styles.sideBtnLabelDisabled,
-                ]}
+          {/* Commute Touch Transport Deck (64px & 48px Rectangles, NOT Circles) */}
+          <View style={styles.transportContainer}>
+            {/* Primary Transport Row: 64px Rectangular Blocks */}
+            <View style={styles.transportRowPrimary}>
+              {/* -15s Replay: 1 Column Rectangular Block */}
+              <TouchableOpacity
+                style={styles.transportBtnSecondary}
+                onPress={replay15s}
+                disabled={!isActive}
+                activeOpacity={0.85}
               >
-                PREV
-              </Text>
-            </Pressable>
+                <MaterialIcons name="replay-10" size={24} color="#dfe2ee" />
+                <Text style={styles.transportBtnSubtext}>-15S</Text>
+              </TouchableOpacity>
 
-            {/* Primary Center Play / Pause Button (Center-Dominant, 2-Col Span) */}
-            <Pressable
-              onPress={togglePlayPause}
-              disabled={!isActive || audioLoading}
-              style={({ pressed }) => [
-                styles.transportPrimaryBtn,
-                pressed && styles.btnPressed,
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel={isPlaying && isActive ? 'Pause' : 'Play'}
-            >
-              {audioLoading ? (
-                <ActivityIndicator
-                  color={colors['on-primary-container']}
-                  size="small"
-                />
-              ) : (
-                <>
-                  <MaterialCommunityIcons
-                    name={isPlaying && isActive ? 'pause-circle' : 'play-circle'}
-                    size={30}
-                    color={colors['on-primary-container']}
-                  />
-                  <View style={styles.primaryTextCol}>
-                    <Text style={styles.primaryPlayTitle}>
-                      {isPlaying && isActive ? 'PLAYING' : 'PAUSED'}
-                    </Text>
-                    <Text style={styles.primaryPlaySubtitle}>
-                      {isPlaying && isActive ? 'TAP TO PAUSE' : 'TAP TO RESUME'}
-                    </Text>
-                  </View>
-                </>
-              )}
-            </Pressable>
-
-            {/* Skip Next Button */}
-            <Pressable
-              onPress={advanceNext}
-              disabled={!isActive || index >= blipps.length - 1}
-              style={({ pressed }) => [
-                styles.transportSideBtn,
-                (!isActive || index >= blipps.length - 1) && styles.btnDisabled,
-                pressed && styles.btnPressed,
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel="Next track"
-            >
-              <MaterialCommunityIcons
-                name="skip-next"
-                size={24}
-                color={
-                  !isActive || index >= blipps.length - 1
-                    ? colors['on-surface-variant']
-                    : colors['on-surface']
-                }
-              />
-              <Text
+              {/* Center Play/Pause: 2 Column Wide Dominant Rectangular Block */}
+              <TouchableOpacity
                 style={[
-                  styles.sideBtnLabel,
-                  (!isActive || index >= blipps.length - 1) &&
-                    styles.sideBtnLabelDisabled,
+                  styles.transportBtnPrimary,
+                  isPlaying && isActive && styles.transportBtnPrimaryGlow,
                 ]}
+                onPress={togglePlayPause}
+                disabled={!isActive || audioLoading}
+                activeOpacity={0.9}
               >
-                NEXT
-              </Text>
-            </Pressable>
+                {audioLoading ? (
+                  <ActivityIndicator color="#5f1900" size="small" />
+                ) : (
+                  <>
+                    <MaterialIcons
+                      name={isPlaying && isActive ? 'pause' : 'play-arrow'}
+                      size={30}
+                      color="#5f1900"
+                    />
+                    <View style={styles.primaryBtnTextCol}>
+                      <Text style={styles.primaryBtnTitle}>
+                        {isPlaying && isActive ? 'PLAYING' : 'PAUSED'}
+                      </Text>
+                      <Text style={styles.primaryBtnSubtitle}>
+                        {isPlaying && isActive ? 'TAP TO PAUSE' : 'TAP TO RESUME'}
+                      </Text>
+                    </View>
+                  </>
+                )}
+              </TouchableOpacity>
+
+              {/* Next Blip: 1 Column Rectangular Block */}
+              <TouchableOpacity
+                style={[
+                  styles.transportBtnSecondary,
+                  (!isActive || index >= blipps.length - 1) && styles.btnDisabled,
+                ]}
+                onPress={advanceNext}
+                disabled={!isActive || index >= blipps.length - 1}
+                activeOpacity={0.85}
+              >
+                <MaterialIcons name="skip-next" size={24} color="#dfe2ee" />
+                <Text style={styles.transportBtnSubtext}>NEXT</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Secondary Glanceable Action Row: 48px Rectangles */}
+            <View style={styles.transportRowSecondary}>
+              <TouchableOpacity style={styles.deckActionBtn} activeOpacity={0.85}>
+                <MaterialIcons name="cloud-download" size={18} color="#00eefc" />
+                <Text style={styles.deckActionText}>CACHED</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.deckActionBtn} activeOpacity={0.85}>
+                <MaterialIcons name="bolt" size={18} color="#ff6b35" />
+                <Text style={styles.deckActionText}>BOOST • 1.4K</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.deckActionBtn} activeOpacity={0.85}>
+                <MaterialIcons name="queue-music" size={18} color="#bdc6dd" />
+                <Text style={styles.deckActionText}>QUEUE ({blipps.length})</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </View>
@@ -363,7 +345,7 @@ export const FeedScreen = ({ navigation }: any) => {
 
       {loading ? (
         <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color={colors['primary-container']} />
+          <ActivityIndicator size="large" color={Colors.primaryContainer} />
           <Text style={styles.loadingText}>Syncing audio stream…</Text>
         </View>
       ) : blipps.length === 0 ? (
@@ -372,12 +354,12 @@ export const FeedScreen = ({ navigation }: any) => {
           <Text style={styles.emptySubtitle}>
             Be the first to upload a short-form audio clip to the stream.
           </Text>
-          <Pressable
+          <TouchableOpacity
             style={styles.emptyButton}
             onPress={() => navigation.navigate('Upload')}
           >
             <Text style={styles.emptyButtonText}>Upload a Blipp</Text>
-          </Pressable>
+          </TouchableOpacity>
         </View>
       ) : (
         <FlatList
@@ -396,6 +378,7 @@ export const FeedScreen = ({ navigation }: any) => {
           refreshing={refreshing}
           onEndReached={handleEndReached}
           onEndReachedThreshold={0.5}
+          contentContainerStyle={{ paddingBottom: Metrics.bottomPadding }}
           getItemLayout={(_data, index) => ({
             length: ITEM_HEIGHT,
             offset: ITEM_HEIGHT * index,
@@ -420,62 +403,62 @@ export const FeedScreen = ({ navigation }: any) => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: Colors.background,
   },
   cardContainer: {
     height: ITEM_HEIGHT,
-    paddingHorizontal: LayoutMetrics.gutter, // 16px
+    paddingHorizontal: Metrics.gutter, // 16px
     justifyContent: 'center',
     alignItems: 'center',
   },
   heroCard: {
     width: '100%',
-    backgroundColor: colors['surface-container'], // #1c2028
-    borderRadius: LayoutMetrics.radiusCard, // 12px (rounded-xl)
-    padding: 16,
+    backgroundColor: Colors.surfaceContainer, // #1c2028
+    borderRadius: Metrics.radiusXl, // 12px (rounded-xl)
+    padding: Metrics.spaceMd, // 16px
     borderWidth: 1,
-    borderColor: colors['outline-variant'], // #424750
+    borderColor: Colors.outlineVariant, // #594139
   },
   topTelemetryRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: Metrics.spaceSm,
   },
   streamBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: colors['surface-container-high'],
+    backgroundColor: Colors.surfaceContainerHigh,
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: LayoutMetrics.radiusBadge, // 9999px
+    borderRadius: Metrics.radiusFull, // 9999px
   },
   statusDot: {
     width: 6,
     height: 6,
-    borderRadius: LayoutMetrics.radiusBadge,
-    backgroundColor: colors.secondary,
+    borderRadius: Metrics.radiusFull,
+    backgroundColor: Colors.secondaryContainer,
   },
   streamBadgeText: {
     ...Typography.labelCaps,
     fontSize: 10,
-    color: colors.secondary,
+    color: Colors.secondaryContainer,
   },
   bitrateBadge: {
-    backgroundColor: colors['surface-container-lowest'],
+    backgroundColor: Colors.surfaceContainerLowest,
     paddingHorizontal: 8,
     paddingVertical: 2,
-    borderRadius: 8,
+    borderRadius: Metrics.radiusLg, // 8px
   },
   bitrateBadgeText: {
     ...Typography.telemetryData,
     fontSize: 11,
-    color: colors.secondary,
+    color: Colors.secondaryContainer,
   },
   clipTitle: {
-    ...Typography.headlineMd, // SpaceGrotesk-SemiBold, 22px, lineHeight: 28px, -0.22px
-    color: colors['on-surface'],
+    ...Typography.headlineMd, // SpaceGrotesk-SemiBold, 22px, lineHeight: 28px, -0.22px (NO fontWeight)
+    color: Colors.onSurface,
     marginTop: 4,
     marginBottom: 8,
   },
@@ -488,114 +471,142 @@ const styles = StyleSheet.create({
   creatorAvatar: {
     width: 32,
     height: 32,
-    borderRadius: LayoutMetrics.radiusBadge,
-    backgroundColor: colors['surface-container-highest'],
+    borderRadius: Metrics.radiusFull,
+    backgroundColor: Colors.surfaceContainerHighest,
     alignItems: 'center',
     justifyContent: 'center',
   },
   creatorAvatarText: {
     fontFamily: 'SpaceGrotesk-SemiBold',
     fontSize: 13,
-    color: colors['on-surface'],
+    color: Colors.onSurface,
   },
   creatorInfo: {
     flex: 1,
   },
   creatorName: {
     ...Typography.transcriptHighlight, // Inter-SemiBold, 16px, lineHeight: 24px, -0.16px
-    color: colors['on-surface'],
+    color: Colors.onSurface,
   },
   creatorSub: {
     ...Typography.bodySm, // Inter-Regular, 13px, lineHeight: 18px
-    color: colors['on-surface-variant'],
+    color: Colors.onSurfaceVariant,
   },
-  transportDeck: {
-    height: LayoutMetrics.transportPrimaryHeight, // 64px (h-16)
-    flexDirection: 'row',
-    alignItems: 'center',
+  // Commute Touch Transport Deck (64px & 48px Rectangles, NOT Circles)
+  transportContainer: {
     gap: 8,
+    width: '100%',
     marginTop: 4,
   },
-  transportSideBtn: {
+  transportRowPrimary: {
+    flexDirection: 'row',
+    height: Metrics.transportPrimaryHeight, // 64px (Exact h-16)
+    gap: 8,
+  },
+  // Columns 1 and 4 (Flex 1 each)
+  transportBtnSecondary: {
     flex: 1,
-    height: LayoutMetrics.transportPrimaryHeight, // 64px (h-16)
-    borderRadius: LayoutMetrics.radiusButton, // 12px (rounded-xl)
-    backgroundColor: colors['surface-container-high'],
+    height: Metrics.transportPrimaryHeight, // 64px
+    borderRadius: Metrics.radiusXl, // 12px (rounded-xl, NOT circular)
+    backgroundColor: Colors.surfaceContainer, // #1c2028
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 3,
+    gap: 2,
+  },
+  transportBtnSubtext: {
+    ...Typography.labelCaps,
+    fontSize: 10,
+    color: Colors.onSurfaceVariant,
+  },
+  // Columns 2-3 (Flex 2 span)
+  transportBtnPrimary: {
+    flex: 2,
+    height: Metrics.transportPrimaryHeight, // 64px
+    borderRadius: Metrics.radiusXl, // 12px (rounded-xl, NOT circular)
+    backgroundColor: Colors.primaryContainer, // #ff6b35
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  transportBtnPrimaryGlow: {
+    shadowColor: Colors.primaryContainer,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  primaryBtnTextCol: {
+    alignItems: 'flex-start',
+  },
+  primaryBtnTitle: {
+    ...Typography.headlineSm,
+    fontSize: 15,
+    color: Colors.onPrimaryContainer, // #5f1900
+    lineHeight: 18,
+  },
+  primaryBtnSubtitle: {
+    ...Typography.labelCaps,
+    fontSize: 9,
+    color: 'rgba(95, 25, 0, 0.8)',
+    lineHeight: 12,
+  },
+  // Secondary Row: 48px Rectangles (Exact h-12)
+  transportRowSecondary: {
+    flexDirection: 'row',
+    height: Metrics.transportSecondaryHeight, // 48px
+    gap: 8,
+  },
+  deckActionBtn: {
+    flex: 1,
+    height: Metrics.transportSecondaryHeight, // 48px
+    borderRadius: Metrics.radiusXl, // 12px (rounded-xl, NOT circular)
+    backgroundColor: Colors.surfaceContainerLow, // #181c24
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  deckActionText: {
+    ...Typography.labelCaps,
+    fontSize: 10,
+    color: Colors.onSurface,
   },
   btnDisabled: {
     opacity: 0.35,
-  },
-  sideBtnLabel: {
-    ...Typography.labelCaps,
-    fontSize: 10,
-    color: colors['on-surface'],
-  },
-  sideBtnLabelDisabled: {
-    color: colors['on-surface-variant'],
-  },
-  transportPrimaryBtn: {
-    flex: 2,
-    height: LayoutMetrics.transportPrimaryHeight, // 64px (h-16, col-span-2)
-    borderRadius: LayoutMetrics.radiusButton, // 12px (rounded-xl)
-    backgroundColor: colors['primary-container'], // #ff6b35
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingHorizontal: 12,
-  },
-  primaryTextCol: {
-    alignItems: 'flex-start',
-  },
-  primaryPlayTitle: {
-    ...Typography.headlineSm, // SpaceGrotesk-SemiBold, 18px, lineHeight: 24px, 0px
-    color: colors['on-primary-container'],
-  },
-  primaryPlaySubtitle: {
-    ...Typography.labelCaps,
-    fontSize: 10,
-    color: colors['on-primary-container'],
-    opacity: 0.8,
-  },
-  btnPressed: {
-    opacity: 0.85,
-    transform: [{ scale: 0.98 }],
   },
   centerContainer: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: LayoutMetrics.gutter,
+    paddingHorizontal: Metrics.gutter,
   },
   loadingText: {
     ...Typography.bodyMd,
-    color: colors['on-surface-variant'],
+    color: Colors.onSurfaceVariant,
     marginTop: 12,
   },
   emptyTitle: {
     ...Typography.headlineMd,
-    color: colors['on-surface'],
+    color: Colors.onSurface,
     textAlign: 'center',
   },
   emptySubtitle: {
     ...Typography.bodyMd,
-    color: colors['on-surface-variant'],
+    color: Colors.onSurfaceVariant,
     textAlign: 'center',
     marginTop: 8,
     marginBottom: 24,
   },
   emptyButton: {
-    backgroundColor: colors['primary-container'],
+    backgroundColor: Colors.primaryContainer,
     paddingVertical: 12,
     paddingHorizontal: 24,
-    borderRadius: LayoutMetrics.radiusBadge,
+    borderRadius: Metrics.radiusFull,
   },
   emptyButtonText: {
     ...Typography.labelCaps,
     fontSize: 13,
-    color: colors['on-primary-container'],
+    color: Colors.onPrimaryContainer,
   },
 });

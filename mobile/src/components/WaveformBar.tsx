@@ -141,9 +141,9 @@ const styles = StyleSheet.create({
   },
   telemetryAmber: {
     ...Typography.telemetryData,
+    fontFamily: 'JetBrainsMono-SemiBold',
     fontSize: 10,
     color: colors.primary,
-    fontWeight: '600',
   },
   syncBadge: {
     flexDirection: 'row',
@@ -193,8 +193,8 @@ const styles = StyleSheet.create({
   },
   timeElapsed: {
     ...Typography.telemetryData,
+    fontFamily: 'JetBrainsMono-SemiBold',
     color: colors.primary,
-    fontWeight: '600',
   },
   timeTotal: {
     ...Typography.telemetryData,
