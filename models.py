@@ -48,6 +48,7 @@ class Blipp(SQLModel, table=True):
         default_factory=_utcnow,
         sa_column=Column(DateTime(timezone=True), nullable=False)
     )
+    is_saved: Optional[bool] = Field(default=False)
 
 
 class Like(SQLModel, table=True):
@@ -80,3 +81,9 @@ class Save(SQLModel, table=True):
         default_factory=_utcnow,
         sa_column=Column(DateTime(timezone=True), nullable=False)
     )
+
+
+# Compatibility aliases
+SavedBlip = Save
+Blip = Blipp
+

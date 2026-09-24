@@ -397,129 +397,13 @@ async def get_feed(
 
 
 # ---------------------------------------------------------------------------
-# Single blipp
-# ---------------------------------------------------------------------------
-
-@router.get("/v1/blipps/{blipp_id}", response_model=BlippOut)
-async def get_blipp(
-    blipp_id: uuid.UUID,
-    session: SessionDep,
-    request: Request,
-    optional_user: OptionalUser = None,
-):
-    rid = _req_id(request)
-    blipp = await session.get(Blipp, blipp_id)
-    if blipp is None:
-        raise _err("NOT_FOUND", f"Blipp {blipp_id} not found", rid, 404)
-
-    creator = await session.get(User, blipp.creator_id)
-
-    liked = False
-    saved = False
-    if optional_user:
-        like_row = (await session.execute(
-            select(Like).where((Like.user_id == optional_user.id) & (Like.blipp_id == blipp_id))
-        )).scalar_one_or_none()
-        liked = like_row is not None
-
-        save_row = (await session.execute(
-            select(Save).where((Save.user_id == optional_user.id) & (Save.blipp_id == blipp_id))
-        )).scalar_one_or_none()
-        saved = save_row is not None
-
-    return _blipp_out(
-        blipp,
-        creator.username if creator else "unknown",
-        liked=liked,
-        saved=saved,
-    )
-
-
-# ---------------------------------------------------------------------------
-# Likes and Saves
-# ---------------------------------------------------------------------------
-
-@router.post("/v1/blipps/{blipp_id}/like", response_model=LikeOut)
-async def toggle_like(
-    blipp_id: uuid.UUID,
-    current_user: CurrentUser,
-    session: SessionDep,
-    request: Request,
-):
-    rid = _req_id(request)
-    blipp = await session.get(Blipp, blipp_id)
-    if blipp is None:
-        raise _err("NOT_FOUND", f"Blipp {blipp_id} not found", rid, 404)
-
-    existing = (await session.execute(
-        select(Like).where(
-            (Like.user_id == current_user.id) & (Like.blipp_id == blipp_id)
-        )
-    )).scalar_one_or_none()
-
-    if existing:
-        await session.delete(existing)
-        await session.commit()
-        return LikeOut(liked=False)
-    else:
-        new_like = Like(user_id=current_user.id, blipp_id=blipp_id)
-        session.add(new_like)
-        try:
-            await session.commit()
-        except Exception:
-            await session.rollback()
-            check = (await session.execute(
-                select(Like).where(
-                    (Like.user_id == current_user.id) & (Like.blipp_id == blipp_id)
-                )
-            )).scalar_one_or_none()
-            return LikeOut(liked=(check is not None))
-        return LikeOut(liked=True)
-
-
-@router.post("/v1/blipps/{blipp_id}/save", response_model=SaveOut)
-async def toggle_save(
-    blipp_id: uuid.UUID,
-    current_user: CurrentUser,
-    session: SessionDep,
-    request: Request,
-):
-    rid = _req_id(request)
-    blipp = await session.get(Blipp, blipp_id)
-    if blipp is None:
-        raise _err("NOT_FOUND", f"Blipp {blipp_id} not found", rid, 404)
-
-    existing = (await session.execute(
-        select(Save).where(
-            (Save.user_id == current_user.id) & (Save.blipp_id == blipp_id)
-        )
-    )).scalar_one_or_none()
-
-    if existing:
-        await session.delete(existing)
-        await session.commit()
-        return SaveOut(saved=False)
-    else:
-        new_save = Save(user_id=current_user.id, blipp_id=blipp_id)
-        session.add(new_save)
-        try:
-            await session.commit()
-        except Exception:
-            await session.rollback()
-            check = (await session.execute(
-                select(Save).where(
-                    (Save.user_id == current_user.id) & (Save.blipp_id == blipp_id)
-                )
-            )).scalar_one_or_none()
-            return SaveOut(saved=(check is not None))
-        return SaveOut(saved=True)
-
-
-# ---------------------------------------------------------------------------
-# Saved Blipps (Authenticated)
+# 1. SPECIFIC SUB-PATHS FIRST (Must be above /{blipp_id} to prevent 404!)
 # ---------------------------------------------------------------------------
 
 @router.get("/v1/saves", response_model=FeedPage)
+@router.get("/v1/blipps/saved", response_model=FeedPage)
+@router.get("/blips/saved", response_model=FeedPage)
+@router.get("/api/blips/saved", response_model=FeedPage)
 async def get_saves(
     current_user: CurrentUser,
     session: SessionDep,
@@ -600,5 +484,138 @@ async def get_saves(
         next_cursor = last_dt.isoformat()
 
     return FeedPage(items=items, next_cursor=next_cursor)
+
+
+# ---------------------------------------------------------------------------
+# 2. SAVE / BOOKMARK / LIKE TOGGLE ACTIONS
+# ---------------------------------------------------------------------------
+
+@router.post("/v1/blipps/{blipp_id}/save", response_model=SaveOut)
+@router.post("/v1/blipps/{blipp_id}/bookmark", response_model=SaveOut)
+@router.post("/blips/{blipp_id}/save", response_model=SaveOut)
+@router.post("/blips/{blipp_id}/bookmark", response_model=SaveOut)
+@router.post("/api/blips/{blipp_id}/save", response_model=SaveOut)
+@router.post("/api/blips/{blipp_id}/bookmark", response_model=SaveOut)
+async def toggle_save(
+    blipp_id: uuid.UUID,
+    current_user: CurrentUser,
+    session: SessionDep,
+    request: Request,
+):
+    rid = _req_id(request)
+    blipp = await session.get(Blipp, blipp_id)
+    if blipp is None:
+        raise _err("NOT_FOUND", f"Blipp {blipp_id} not found", rid, 404)
+
+    existing = (await session.execute(
+        select(Save).where(
+            (Save.user_id == current_user.id) & (Save.blipp_id == blipp_id)
+        )
+    )).scalar_one_or_none()
+
+    if existing:
+        await session.delete(existing)
+        if hasattr(blipp, "is_saved"):
+            blipp.is_saved = False
+        await session.commit()
+        return SaveOut(saved=False)
+    else:
+        new_save = Save(user_id=current_user.id, blipp_id=blipp_id)
+        session.add(new_save)
+        if hasattr(blipp, "is_saved"):
+            blipp.is_saved = True
+        try:
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            check = (await session.execute(
+                select(Save).where(
+                    (Save.user_id == current_user.id) & (Save.blipp_id == blipp_id)
+                )
+            )).scalar_one_or_none()
+            return SaveOut(saved=(check is not None))
+        return SaveOut(saved=True)
+
+
+@router.post("/v1/blipps/{blipp_id}/like", response_model=LikeOut)
+@router.post("/blips/{blipp_id}/like", response_model=LikeOut)
+@router.post("/api/blips/{blipp_id}/like", response_model=LikeOut)
+async def toggle_like(
+    blipp_id: uuid.UUID,
+    current_user: CurrentUser,
+    session: SessionDep,
+    request: Request,
+):
+    rid = _req_id(request)
+    blipp = await session.get(Blipp, blipp_id)
+    if blipp is None:
+        raise _err("NOT_FOUND", f"Blipp {blipp_id} not found", rid, 404)
+
+    existing = (await session.execute(
+        select(Like).where(
+            (Like.user_id == current_user.id) & (Like.blipp_id == blipp_id)
+        )
+    )).scalar_one_or_none()
+
+    if existing:
+        await session.delete(existing)
+        await session.commit()
+        return LikeOut(liked=False)
+    else:
+        new_like = Like(user_id=current_user.id, blipp_id=blipp_id)
+        session.add(new_like)
+        try:
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            check = (await session.execute(
+                select(Like).where(
+                    (Like.user_id == current_user.id) & (Like.blipp_id == blipp_id)
+                )
+            )).scalar_one_or_none()
+            return LikeOut(liked=(check is not None))
+        return LikeOut(liked=True)
+
+
+# ---------------------------------------------------------------------------
+# 3. GENERIC PARAMETERIZED PATH LAST
+# ---------------------------------------------------------------------------
+
+@router.get("/v1/blipps/{blipp_id}", response_model=BlippOut)
+@router.get("/blips/{blipp_id}", response_model=BlippOut)
+@router.get("/api/blips/{blipp_id}", response_model=BlippOut)
+async def get_blipp(
+    blipp_id: uuid.UUID,
+    session: SessionDep,
+    request: Request,
+    optional_user: OptionalUser = None,
+):
+    rid = _req_id(request)
+    blipp = await session.get(Blipp, blipp_id)
+    if blipp is None:
+        raise _err("NOT_FOUND", f"Blipp {blipp_id} not found", rid, 404)
+
+    creator = await session.get(User, blipp.creator_id)
+
+    liked = False
+    saved = False
+    if optional_user:
+        like_row = (await session.execute(
+            select(Like).where((Like.user_id == optional_user.id) & (Like.blipp_id == blipp_id))
+        )).scalar_one_or_none()
+        liked = like_row is not None
+
+        save_row = (await session.execute(
+            select(Save).where((Save.user_id == optional_user.id) & (Save.blipp_id == blipp_id))
+        )).scalar_one_or_none()
+        saved = save_row is not None
+
+    return _blipp_out(
+        blipp,
+        creator.username if creator else "unknown",
+        liked=liked,
+        saved=saved,
+    )
+
 
 

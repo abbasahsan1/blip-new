@@ -313,3 +313,8 @@ export const uploadBlip = async (
   throw new Error('Invalid upload parameters');
 };
 
+export const getSavedBlips = fetchSavesApi;
+export const toggleSaveBlip = async (blippId: string | number) => {
+  return toggleSaveApi(String(blippId));
+};
+

@@ -438,7 +438,7 @@ export const FeedScreen = ({ navigation }: any) => {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView edges={['bottom', 'left', 'right']} style={styles.safeArea}>
       <Header />
 
       {/* Non-blocking Toast Notification */}

@@ -1,109 +1,98 @@
 import React from 'react';
-import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { Colors, Metrics, Typography } from '../theme/tokens';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-export const Header: React.FC = () => {
+export function Header() {
+  const insets = useSafeAreaInsets();
+
   return (
-    <View style={styles.header}>
-      {/* Brand & Feed Title */}
-      <View style={styles.leftCol}>
-        <View style={styles.liveRow}>
-          <Text style={styles.liveTag}>BLIPP // LIVE</Text>
-          <View style={styles.pulseDot} />
+    <View style={[styles.headerContainer, { paddingTop: insets.top }]}>
+      <View style={styles.headerContent}>
+        <View style={styles.brandRow}>
+          <Text style={styles.brandTag}>BLIPP // LIVE</Text>
+          <Text style={styles.brandTitle}>Feed</Text>
         </View>
-        <Text style={styles.screenTitle}>Feed</Text>
-      </View>
 
-      {/* Header Action Buttons (44px Rounded-xl 12px hardware blocks) */}
-      <View style={styles.rightActions}>
-        <TouchableOpacity
-          style={styles.headerActionBtn}
-          activeOpacity={0.85}
-          accessibilityLabel="Commute Mode"
-        >
-          <MaterialIcons name="directions-car" size={20} color={Colors.onSurfaceVariant} />
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.headerActionBtn}
-          activeOpacity={0.85}
-          accessibilityLabel="Lock Screen Audio"
-        >
-          <MaterialIcons name="lock-clock" size={20} color={Colors.onSurfaceVariant} />
-        </TouchableOpacity>
-
-        <View style={styles.profileAvatar}>
-          <Text style={styles.avatarInitial}>B</Text>
+        <View style={styles.actionsRow}>
+          <TouchableOpacity
+            style={styles.headerActionBtn}
+            activeOpacity={0.85}
+            accessibilityLabel="Commute Mode"
+          >
+            <MaterialIcons name="directions-car" size={20} color="#bdc6dd" />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.headerActionBtn}
+            activeOpacity={0.85}
+            accessibilityLabel="Lock Screen Audio"
+          >
+            <MaterialIcons name="lock-clock" size={20} color="#bdc6dd" />
+          </TouchableOpacity>
+          <View style={styles.profileAvatar}>
+            <Text style={styles.avatarInitial}>B</Text>
+          </View>
         </View>
       </View>
     </View>
   );
-};
+}
+
+export default Header;
 
 const styles = StyleSheet.create({
-  header: {
-    height: Metrics.headerHeight, // 64px (h-16)
-    backgroundColor: Colors.surface,
+  headerContainer: {
+    backgroundColor: 'rgba(15, 19, 28, 0.92)',
+    borderBottomWidth: 1,
+    borderBottomColor: '#1c2028',
+    zIndex: 50,
+  },
+  headerContent: {
+    height: 64, // Exact h-16
+    paddingHorizontal: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: Metrics.gutter,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.outlineVariant,
   },
-  leftCol: {
-    justifyContent: 'center',
+  brandRow: {
+    flexDirection: 'column',
   },
-  liveRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  liveTag: {
-    ...Typography.labelCaps,
+  brandTag: {
+    fontFamily: 'JetBrainsMono-SemiBold',
     fontSize: 10,
-    color: Colors.secondaryContainer, // #00eefc
-    letterSpacing: 1.0,
+    letterSpacing: 0.88,
+    color: '#00eefc',
   },
-  pulseDot: {
-    width: 6,
-    height: 6,
-    borderRadius: Metrics.radiusFull,
-    backgroundColor: Colors.secondaryContainer,
+  brandTitle: {
+    fontFamily: 'SpaceGrotesk-SemiBold',
+    fontSize: 18,
+    color: '#dfe2ee',
   },
-  screenTitle: {
-    ...Typography.headlineSm,
-    color: Colors.onSurface,
-    marginTop: 1,
-  },
-  rightActions: {
+  actionsRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
   },
-  // Exact 44px rounded-xl hardware action blocks (NOT rounded-full)
   headerActionBtn: {
-    width: 44,       // Exact w-11
-    height: 44,      // Exact h-11
-    borderRadius: Metrics.radiusXl, // Exact rounded-xl (12px)
-    backgroundColor: Colors.surfaceContainerLow, // #181c24
+    width: 44, // Exact w-11
+    height: 44, // Exact h-11
+    borderRadius: 12, // Exact rounded-xl (NOT rounded-full)
+    backgroundColor: '#181c24',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  // Only the profile avatar itself remains circular
   profileAvatar: {
     width: 32,
     height: 32,
-    borderRadius: 16, // rounded-full
-    backgroundColor: Colors.surfaceContainerHigh,
+    borderRadius: 16,
+    backgroundColor: '#262a33',
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: 2,
   },
   avatarInitial: {
-    ...Typography.labelCaps,
+    fontFamily: 'JetBrainsMono-SemiBold',
     fontSize: 13,
-    color: Colors.onSurface,
+    color: '#dfe2ee',
   },
 });
